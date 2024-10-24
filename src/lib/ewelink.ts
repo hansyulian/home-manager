@@ -8,6 +8,7 @@ import { randomString } from "~/lib/utils/randomString";
 import { homeSensorService } from "~/lib/homeSensorService";
 import { BaseFileStore } from "~/lib/fileStore";
 import { EwelinkStore } from "~/types/stores";
+import { EwelinkSwitchData } from "~/types/responses";
 
 const ewelinkStore = new BaseFileStore<EwelinkStore>("ewelink.json");
 
@@ -22,6 +23,7 @@ export class Ewelink {
   private intervalInstance?: NodeJS.Timeout;
   public refreshToken: string = "";
   public accessToken: string = "";
+  private triggerInterval = appConfig.waterTorrent.triggerInterval;
 
   constructor() {}
 
@@ -82,6 +84,8 @@ export class Ewelink {
     this.refreshToken = storedData.refreshToken;
     this.accessTokenExpiry = storedData.accessTokenExpiry;
     this.refreshTokenExpiry = storedData.accessTokenExpiry;
+    this.ewelinkClient.rt = this.refreshToken;
+    this.ewelinkClient.at = this.accessToken;
   }
 
   async isAuthenticated() {
@@ -94,24 +98,32 @@ export class Ewelink {
     );
   }
 
-  get isWaterPumpManagerRunning() {
+  get isWaterPumpManaged() {
     return !!this.intervalInstance;
   }
 
-  startWaterPumpManager() {
+  async stopWaterPumpManager() {
+    await this.ensureClientReady();
     if (this.intervalInstance) {
+      console.log("stopping water pump manager");
       clearInterval(this.intervalInstance);
+      this.intervalInstance = undefined;
     }
+  }
+
+  async startWaterPumpManager() {
+    await this.ensureClientReady();
+    await this.stopWaterPumpManager();
     console.log("Starting water pump manager");
-    this.handleWaterPump();
+    await this.handleWaterPump();
     const self = this;
-    this.intervalInstance = setInterval(() => {
+    this.intervalInstance = setInterval(async () => {
       try {
-        self.handleWaterPump();
+        await self.handleWaterPump();
       } catch (err) {
         console.error(err);
       }
-    }, 3600_000);
+    }, this.triggerInterval * 1000);
   }
   async handleWaterPump() {
     console.log(`--------- ${dayjs().format("YYYY-MM-DD HH:mm:SS")} ---------`);
@@ -121,18 +133,25 @@ export class Ewelink {
       console.log("Water torrent data not detected! Aborting...");
       return;
     }
+    console.log("Water torrent distance", waterTorrentData.value);
+    if (waterTorrentData.value < appConfig.waterTorrent.triggerValue) {
+      console.log(
+        "Pumping untriggered, trigger value: ",
+        appConfig.waterTorrent.triggerValue
+      );
+      return;
+    }
     if (!this.refreshToken) {
       console.log("Missing refresh token");
+      return;
     }
-    if (waterTorrentData.value > appConfig.waterTorrent.triggerValue) {
-      await this.ensureClientReady();
-      console.log("Turning water pump on");
-      await this.turnWaterPumpState(true);
-      console.log(`Waiting ${appConfig.waterTorrent.triggerDuration} seconds`);
-      await wait(appConfig.waterTorrent.triggerDuration * 1000);
-      console.log("Turning water pump off");
-      await this.turnWaterPumpState(false);
-    }
+    await this.ensureClientReady();
+    console.log("Turning water pump on");
+    await this.setWaterPumpState(true);
+    console.log(`Waiting ${appConfig.waterTorrent.triggerDuration} seconds`);
+    await wait(appConfig.waterTorrent.triggerDuration * 1000);
+    console.log("Turning water pump off");
+    await this.setWaterPumpState(false);
   }
 
   async getWaterTorrentData() {
@@ -140,48 +159,74 @@ export class Ewelink {
     return result.waterTorrent;
   }
   async ensureClientReady() {
+    await this.loadAuth();
+    if (!this.refreshToken) {
+      throw new Error("missing refresh token");
+    }
     const now = new Date().getTime();
-    if (now > this.accessTokenExpiry) {
-      try {
-        console.log("refreshing token");
-        const refreshStatus = await this.ewelinkClient.user.refreshToken({
-          rt: this.refreshToken,
-        });
-        if (refreshStatus.error === 0) {
-          this.accessToken = refreshStatus?.data?.at;
-          this.refreshToken = refreshStatus?.data?.rt;
-          this.accessTokenExpiry = refreshStatus?.data?.atExpiredTime;
-          this.refreshTokenExpiry = refreshStatus?.data?.rtExpiredTime;
-          console.log("new access token", this.accessToken);
-          console.log("new refresh token", this.refreshToken);
-          this.saveAuth(
-            this.accessToken,
-            this.refreshToken,
-            this.accessTokenExpiry,
-            this.refreshTokenExpiry
-          );
-        } else {
-          console.error(refreshStatus);
-          clearInterval(this.intervalInstance);
-        }
-      } catch (err) {
-        console.error(err);
-        clearInterval(this.intervalInstance);
+    if (now < this.accessTokenExpiry) {
+      return;
+    }
+    try {
+      console.log("refreshing token");
+      const refreshStatus = await this.ewelinkClient.user.refreshToken({
+        rt: this.refreshToken,
+      });
+      if (refreshStatus.error === 0) {
+        this.accessToken = refreshStatus?.data?.at;
+        this.refreshToken = refreshStatus?.data?.rt;
+        this.accessTokenExpiry = refreshStatus?.data?.atExpiredTime;
+        this.refreshTokenExpiry = refreshStatus?.data?.rtExpiredTime;
+        console.log("new access token", this.accessToken);
+        console.log("new refresh token", this.refreshToken);
+        this.saveAuth(
+          this.accessToken,
+          this.refreshToken,
+          this.accessTokenExpiry,
+          this.refreshTokenExpiry
+        );
+      } else {
+        console.error(refreshStatus);
+        this.stopWaterPumpManager();
       }
+    } catch (err) {
+      console.error(err);
+      this.stopWaterPumpManager();
     }
   }
-  async turnWaterPumpState(isOn: boolean) {
+
+  async getWaterPump() {
+    await this.loadAuth();
+    if (!this.isAuthenticated()) {
+      return undefined;
+    }
     const getAllThingsResult = await this.ewelinkClient.device.getAllThings({});
     const allThings = getAllThingsResult.data.thingList;
     const waterPump = allThings.find(
       (record: any) => record.itemData.name === appConfig.ewelink.waterPumpName
     );
     if (!waterPump) {
+      return;
+    }
+    return waterPump.itemData as EwelinkSwitchData;
+  }
+
+  async getWaterPumpState() {
+    const waterPump = await this.getWaterPump();
+    return {
+      isOn: waterPump?.params.switch === "on",
+    };
+  }
+
+  async setWaterPumpState(isOn: boolean) {
+    const waterPump = await this.getWaterPump();
+    if (!waterPump) {
       console.log("Water pump not found!");
       return;
     }
+
     await this.ewelinkClient.device.setThingStatus({
-      id: waterPump.itemData.deviceid,
+      id: waterPump.deviceid,
       type: 1, // device
       params: {
         switch: isOn ? "on" : "off",

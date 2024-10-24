@@ -12,4 +12,19 @@ export type HomeSensorResponse = {
 export type GetEwelinkStatusResponse = {
   isAuthenticated: boolean;
   waterTorrent: WaterTorrentData;
+  waterPump: WaterPumpData;
+};
+
+export type WaterPumpData = {
+  isOn: boolean;
+  isManaged: boolean;
+};
+
+export type EwelinkSwitchData = {
+  // just use anything useful for now
+  name: string;
+  deviceid: string;
+  params: {
+    switch: "off" | "on";
+  };
 };

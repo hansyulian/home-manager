@@ -1,3 +1,4 @@
+import { ThemeIconProps, ThemeIcon } from "@mantine/core";
 import {
   IconCircleCheckFilled,
   IconCircleXFilled,
@@ -11,12 +12,16 @@ const iconMap = {
 
 export type IconNames = keyof typeof iconMap;
 
-export type IconProps = BaseIconProps & {
+export type IconProps = ThemeIconProps & {
   name: IconNames;
 };
 
 export const Icon = (props: IconProps) => {
   const { name, ...rest } = props;
   const IconComponent = iconMap[name];
-  return <IconComponent {...rest} />;
+  return (
+    <ThemeIcon variant="transparent" {...rest}>
+      <IconComponent />
+    </ThemeIcon>
+  );
 };

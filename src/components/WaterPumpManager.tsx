@@ -1,10 +1,20 @@
 "use client";
 
-import { Button, Loader, Stack, Table, Text, Title } from "@mantine/core";
+import {
+  Button,
+  Loader,
+  Stack,
+  Switch,
+  Table,
+  Text,
+  Title,
+} from "@mantine/core";
 import dayjs from "dayjs";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Icon } from "~/components/Icon";
-import { TableValueLabel } from "~/components/TableValueLabel";
+import { ValueLabel } from "~/components/ValueLabel";
+import { useChangeWaterPumpState } from "~/hooks/useChangeWaterPumpState";
 import { useGetStatus } from "~/hooks/useGetStatus";
 import { WaterTorrentData } from "~/types/responses";
 
@@ -25,7 +35,43 @@ export function WaterPumpManager() {
 }
 
 function AuthenticatedState() {
-  return <Text>Ewelink Authenticated</Text>;
+  const [isOn, setIsOn] = useState(false);
+  const [isManaged, setIsManaged] = useState(false);
+  const { data } = useGetStatus();
+  const changeWaterPumpState = useChangeWaterPumpState();
+
+  const toggleManaged = async () => {
+    setIsManaged(!isManaged);
+    await changeWaterPumpState({
+      isManaged: !isManaged,
+    });
+  };
+
+  const toggleState = async () => {
+    setIsOn(!isOn);
+    await changeWaterPumpState({
+      isOn: !isOn,
+    });
+  };
+
+  useEffect(() => {
+    if (!data) {
+      return;
+    }
+    setIsManaged(data.waterPump.isManaged);
+    setIsOn(data.waterPump.isOn);
+  }, [data]);
+
+  return (
+    <ValueLabel.Container>
+      <ValueLabel label="State">
+        <Switch checked={isOn} onChange={toggleState} />
+      </ValueLabel>
+      <ValueLabel label="Managed">
+        <Switch checked={isManaged} onChange={toggleManaged} />
+      </ValueLabel>
+    </ValueLabel.Container>
+  );
 }
 
 function UnauthenticatedState() {
@@ -40,14 +86,18 @@ function WaterTorrentSummary(props: { data: WaterTorrentData }) {
   const { data } = props;
   const { detected, lastTimestamp, value } = data;
   return (
-    <TableValueLabel.Container>
-      <TableValueLabel label="Sensor Detected">
-        {detected ? <Icon name="success" /> : <Icon name="failed" />}
-      </TableValueLabel>
-      <TableValueLabel label="Sensor Value">{value.toFixed(2)}</TableValueLabel>
-      <TableValueLabel label="Last Timestamp">
+    <ValueLabel.Container>
+      <ValueLabel label="Sensor Detected">
+        {detected ? (
+          <Icon name="success" color="green" />
+        ) : (
+          <Icon name="failed" color="red" />
+        )}
+      </ValueLabel>
+      <ValueLabel label="Sensor Value">{value.toFixed(2)}</ValueLabel>
+      <ValueLabel label="Last Timestamp">
         {dayjs(lastTimestamp).format("YYYY-MM-DD HH:mm:ss")}
-      </TableValueLabel>
-    </TableValueLabel.Container>
+      </ValueLabel>
+    </ValueLabel.Container>
   );
 }

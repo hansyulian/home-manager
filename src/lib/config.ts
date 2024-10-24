@@ -14,5 +14,6 @@ export const appConfig = {
   waterTorrent: {
     triggerValue: parseInt(pe.WATER_TORRENT_TRIGER_VALUE || "25"),
     triggerDuration: parseInt(pe.WATER_TORRENT_TRIGGER_DURATION || "300"),
+    triggerInterval: parseInt(pe.WATER_TORRENT_TRIGGER_INTERVAL || "3600"),
   },
 };
