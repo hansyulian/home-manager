@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  Button,
-  Loader,
-  Stack,
-  Switch,
-  Table,
-  Text,
-  Title,
-} from "@mantine/core";
+import { Button, Loader, Stack, Switch, Title } from "@mantine/core";
 import dayjs from "dayjs";
 import Link from "next/link";
 import { useEffect, useState } from "react";

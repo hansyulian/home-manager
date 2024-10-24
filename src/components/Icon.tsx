@@ -1,9 +1,5 @@
 import { ThemeIconProps, ThemeIcon } from "@mantine/core";
-import {
-  IconCircleCheckFilled,
-  IconCircleXFilled,
-  IconProps as BaseIconProps,
-} from "@tabler/icons-react";
+import { IconCircleCheckFilled, IconCircleXFilled } from "@tabler/icons-react";
 
 const iconMap = {
   success: IconCircleCheckFilled,
