@@ -14,6 +14,9 @@ importers:
       '@mantine/hooks':
         specifier: ^7.13.4
         version: 7.13.4(react@19.0.0-rc-69d4b800-20241021)
+      '@tabler/icons-react':
+        specifier: ^3.20.0
+        version: 3.20.0(react@19.0.0-rc-69d4b800-20241021)
       dayjs:
         specifier: ^1.11.13
         version: 1.11.13
@@ -323,6 +326,14 @@ packages:
 
   '@swc/helpers@0.5.13':
     resolution: {integrity: sha512-UoKGxQ3r5kYI9dALKJapMmuK+1zWM/H17Z1+iwnNmzcJRnfFuevZs375TA5rW31pu4BS4NoSy1fRsexDXfWn5w==}
+
+  '@tabler/icons-react@3.20.0':
+    resolution: {integrity: sha512-a47oaL48bb5Cx/WUVfg/NZrsWwFExrcDQO8thUZ7S6h/OQYFu7sm4E5pZsmUtGCjikB3lRzjtmMD+C4s7mr9yw==}
+    peerDependencies:
+      react: '>= 16'
+
+  '@tabler/icons@3.20.0':
+    resolution: {integrity: sha512-nXSeUzsCOxX/Of+kdUVQfxL9bG+ck8XCWNf9dGSpE+nhVexRwk/4HiDQDxFDysfT7vfgSut6GXnrZsU5M5dSlA==}
 
   '@types/json5@0.0.29':
     resolution: {integrity: sha512-dRLjCWHYg4oaA77cxO64oO+7JwCwnIzkZPdrrC71jQmQtlhM556pwKo5bUzqvZndkVbeFLIIi+9TC40JNF5hNQ==}
@@ -1944,6 +1955,13 @@ snapshots:
   '@swc/helpers@0.5.13':
     dependencies:
       tslib: 2.8.0
+
+  '@tabler/icons-react@3.20.0(react@19.0.0-rc-69d4b800-20241021)':
+    dependencies:
+      '@tabler/icons': 3.20.0
+      react: 19.0.0-rc-69d4b800-20241021
+
+  '@tabler/icons@3.20.0': {}
 
   '@types/json5@0.0.29': {}
 

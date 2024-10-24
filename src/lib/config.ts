@@ -1,6 +1,10 @@
 const pe = process.env;
 
 export const appConfig = {
+  cacheDirectory: pe.CACHE_DIRECTORY || "tmp",
+  hans: {
+    homeServerUrl: pe.HANS_HOME_SERVER_URL || "http://192.168.0.1:6973",
+  },
   ewelink: {
     appId: pe.EWELINK_APP_ID || "",
     appSecret: pe.EWELINK_APP_SECRET || "",

@@ -5,13 +5,11 @@ import dayjs from "dayjs";
 import { wait } from "~/lib/utils/wait";
 import { appConfig } from "~/lib/config";
 import { randomString } from "~/lib/utils/randomString";
+import { homeSensorService } from "~/lib/homeSensorService";
+import { BaseFileStore } from "~/lib/fileStore";
+import { EwelinkStore } from "~/types/stores";
 
-type WaterTorrentData = {
-  type: "waterTorrent";
-  lastTimestamp: string;
-  detected: boolean;
-  value: number;
-};
+const ewelinkStore = new BaseFileStore<EwelinkStore>("ewelink.json");
 
 export class Ewelink {
   private ewelinkClient = new eWeLink.WebAPI({
@@ -19,11 +17,11 @@ export class Ewelink {
     appSecret: appConfig.ewelink.appSecret,
     region: "as",
   });
-  private accessTokenExpiryTime = 0;
-  private refreshTokenExpiryTime = 0;
+  private accessTokenExpiry = 0;
+  private refreshTokenExpiry = 0;
   private intervalInstance?: NodeJS.Timeout;
-  public refreshToken?: string;
-  public accessToken?: string;
+  public refreshToken: string = "";
+  public accessToken: string = "";
 
   constructor() {}
 
@@ -41,23 +39,58 @@ export class Ewelink {
       code,
       redirectUrl: appConfig.ewelink.redirectUrl,
     });
-    const { status, data, msg } = res;
-    if (status !== 200) {
+    const { data, msg } = res;
+    if (msg) {
       throw new Error(msg);
+    }
+    if (!data.accessToken) {
+      throw new Error("Failed");
     }
     this.accessToken = data.accessToken;
     this.refreshToken = data.refreshToken;
-    this.accessTokenExpiryTime = data.atExpiredTime;
-    this.refreshTokenExpiryTime = data.rtExpiredTime;
+    this.accessTokenExpiry = data.atExpiredTime;
+    this.refreshTokenExpiry = data.rtExpiredTime;
+    this.saveAuth(
+      this.accessToken,
+      this.refreshToken,
+      this.accessTokenExpiry,
+      this.refreshTokenExpiry
+    );
     return data;
   }
 
-  get isAuthenticated() {
+  async saveAuth(
+    accessToken: string,
+    refreshToken: string,
+    accessTokenExpiry: number,
+    refreshTokenExpiry: number
+  ) {
+    ewelinkStore.write({
+      accessToken,
+      accessTokenExpiry,
+      refreshToken,
+      refreshTokenExpiry,
+    });
+  }
+
+  async loadAuth() {
+    const storedData = ewelinkStore.read();
+    if (!storedData) {
+      return;
+    }
+    this.accessToken = storedData.accessToken;
+    this.refreshToken = storedData.refreshToken;
+    this.accessTokenExpiry = storedData.accessTokenExpiry;
+    this.refreshTokenExpiry = storedData.accessTokenExpiry;
+  }
+
+  async isAuthenticated() {
+    await this.loadAuth();
     return (
-      this.accessToken &&
-      this.refreshToken &&
-      this.accessTokenExpiryTime &&
-      this.refreshTokenExpiryTime
+      !!this.accessToken &&
+      !!this.refreshToken &&
+      !!this.accessTokenExpiry &&
+      !!this.refreshTokenExpiry
     );
   }
 
@@ -103,25 +136,30 @@ export class Ewelink {
   }
 
   async getWaterTorrentData() {
-    const result = await fetch("http://home.hanyalisti.local/api/sensor");
-    const data = await result.json();
-    return data.waterTorrent as WaterTorrentData;
+    const result = await homeSensorService.getSensorData();
+    return result.waterTorrent;
   }
   async ensureClientReady() {
     const now = new Date().getTime();
-    if (now > this.accessTokenExpiryTime) {
+    if (now > this.accessTokenExpiry) {
       try {
         console.log("refreshing token");
         const refreshStatus = await this.ewelinkClient.user.refreshToken({
           rt: this.refreshToken,
         });
         if (refreshStatus.error === 0) {
-          const accessToken = refreshStatus?.data?.at;
-          const refreshToken = refreshStatus?.data?.rt;
+          this.accessToken = refreshStatus?.data?.at;
           this.refreshToken = refreshStatus?.data?.rt;
-          console.log("new access token", accessToken);
-          console.log("new refresh token", refreshToken);
-          this.accessTokenExpiryTime = now + 2592000_000;
+          this.accessTokenExpiry = refreshStatus?.data?.atExpiredTime;
+          this.refreshTokenExpiry = refreshStatus?.data?.rtExpiredTime;
+          console.log("new access token", this.accessToken);
+          console.log("new refresh token", this.refreshToken);
+          this.saveAuth(
+            this.accessToken,
+            this.refreshToken,
+            this.accessTokenExpiry,
+            this.refreshTokenExpiry
+          );
         } else {
           console.error(refreshStatus);
           clearInterval(this.intervalInstance);
@@ -152,5 +190,4 @@ export class Ewelink {
   }
 }
 
-// for simplicity, just expect the instance to be always running and no serverless
 export const defaultEwelinkInstance = new Ewelink();
