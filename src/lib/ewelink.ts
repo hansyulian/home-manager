@@ -196,7 +196,7 @@ export class Ewelink {
   }
 
   async getWaterPump() {
-    await this.loadAuth();
+    await this.ensureClientReady();
     if (!this.isAuthenticated()) {
       return undefined;
     }

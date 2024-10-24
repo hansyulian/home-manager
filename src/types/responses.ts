@@ -16,7 +16,7 @@ export type GetEwelinkStatusResponse = {
 };
 
 export type WaterPumpData = {
-  isOn: boolean;
+  isOn?: boolean;
   isManaged: boolean;
 };
 

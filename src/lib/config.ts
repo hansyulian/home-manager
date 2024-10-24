@@ -17,3 +17,4 @@ export const appConfig = {
     triggerInterval: parseInt(pe.WATER_TORRENT_TRIGGER_INTERVAL || "3600"),
   },
 };
+console.log(appConfig);

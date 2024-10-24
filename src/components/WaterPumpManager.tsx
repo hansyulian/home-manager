@@ -51,7 +51,7 @@ function AuthenticatedState() {
       return;
     }
     setIsManaged(data.waterPump.isManaged);
-    setIsOn(data.waterPump.isOn);
+    setIsOn(data.waterPump.isOn || false);
   }, [data]);
 
   return (
