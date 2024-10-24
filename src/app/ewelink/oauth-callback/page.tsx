@@ -1,22 +1,25 @@
-// src/app/ewelink/oauth-callback/page.tsx
-
 import { redirect } from "next/navigation";
-import { Text } from "@mantine/core";
+import { defaultEwelinkInstance } from "~/lib/ewelink";
 
 interface Props {
-  searchParams: {
-    code?: string; // Define the structure of your search parameters
-  };
+  searchParams: Promise<{
+    code?: string;
+    region?: string;
+  }>;
 }
 
-// The page will receive searchParams as props for SSR
-export default async function Page({ searchParams }: Props) {
-  const code = searchParams.code; // Get the code directly from the props
+export default async function Page(props: Props) {
+  const searchParams = await props.searchParams;
+  const { code, region } = searchParams;
 
-  // Optional: Handle cases where code is not present
   if (!code) {
-    redirect("/error"); // Redirect if the code is missing
+    throw new Error("Missing code");
+  }
+  if (!region) {
+    throw new Error("Missing region");
   }
 
-  return <Text>Code: {code}</Text>; // Render the code
+  await defaultEwelinkInstance.handleOauthCallback(code, region);
+
+  return redirect("/");
 }
