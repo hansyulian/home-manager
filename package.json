@@ -11,6 +11,8 @@
   "dependencies": {
     "@mantine/core": "^7.13.4",
     "@mantine/hooks": "^7.13.4",
+    "dayjs": "^1.11.13",
+    "ewelink-api-next": "^1.0.4",
     "next": "15.0.1",
     "react": "19.0.0-rc-69d4b800-20241021",
     "react-dom": "19.0.0-rc-69d4b800-20241021",
