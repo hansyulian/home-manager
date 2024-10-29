@@ -11,6 +11,7 @@ export class BaseFileStore<T = any> {
 
   read() {
     if (!fs.existsSync(this.filePath)) {
+      console.log(this.filePath, "not exists");
       return undefined;
     }
     const result = fs.readFileSync(this.filePath, "utf8");
