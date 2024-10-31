@@ -1,6 +1,16 @@
 "use client";
 
-import { Button, Loader, Stack, Switch, Table, Title } from "@mantine/core";
+import {
+  Box,
+  Button,
+  Group,
+  Loader,
+  Stack,
+  Switch,
+  Table,
+  Title,
+  Text,
+} from "@mantine/core";
 import dayjs from "dayjs";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -29,7 +39,7 @@ export function WaterPumpManager() {
 function AuthenticatedState() {
   const [isOn, setIsOn] = useState(false);
   const [isManaged, setIsManaged] = useState(false);
-  const { data } = useGetStatus();
+  const { data, mutate } = useGetStatus();
   const changeWaterPumpState = useChangeWaterPumpState();
 
   const toggleManaged = async () => {
@@ -37,6 +47,7 @@ function AuthenticatedState() {
     await changeWaterPumpState({
       isManaged: !isManaged,
     });
+    mutate();
   };
 
   const toggleState = async () => {
@@ -44,6 +55,7 @@ function AuthenticatedState() {
     await changeWaterPumpState({
       isOn: !isOn,
     });
+    mutate();
   };
 
   useEffect(() => {
@@ -68,9 +80,9 @@ function AuthenticatedState() {
         <Table>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Time</Table.Th>
+              <Table.Th w="200">Time</Table.Th>
               <Table.Th>Sensor Level</Table.Th>
-              <Table.Th>Trigger</Table.Th>
+              <Table.Th w="80">Trigger</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -79,7 +91,27 @@ function AuthenticatedState() {
                 <Table.Td>
                   {dayjs(record.time).format("YYYY-MM-DD HH:mm:ss")}
                 </Table.Td>
-                <Table.Td>{record.sensorValue}</Table.Td>
+                <Table.Td>
+                  <Group>
+                    <Box>
+                      {record.sensorValue
+                        ? Math.round(record.sensorValue)
+                        : null}
+                    </Box>
+                    <Box h="20" flex={1} bd="1px solid black">
+                      <Box
+                        h="100%"
+                        w={calculatePercentage(record.sensorValue)}
+                        bg="blue"
+                        ta="center"
+                      >
+                        <Text c="white" size="sm">
+                          {calculatePercentage(record.sensorValue)}
+                        </Text>
+                      </Box>
+                    </Box>
+                  </Group>
+                </Table.Td>
                 <Table.Td>
                   {record.trigger ? (
                     <Icon name="success" color="green" />
@@ -122,4 +154,17 @@ function WaterTorrentSummary(props: { data: WaterTorrentData }) {
       </ValueLabel>
     </ValueLabel.Container>
   );
+}
+
+function calculatePercentage(value: number | undefined) {
+  if (value === undefined) {
+    return 0;
+  }
+  if (value > 125) {
+    return 0;
+  }
+  if (value < 25) {
+    return "100%";
+  }
+  return `${Math.round(125 - value)}%`;
 }
