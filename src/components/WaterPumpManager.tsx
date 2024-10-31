@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Loader, Stack, Switch, Title } from "@mantine/core";
+import { Button, Loader, Stack, Switch, Table, Title } from "@mantine/core";
 import dayjs from "dayjs";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -55,14 +55,44 @@ function AuthenticatedState() {
   }, [data]);
 
   return (
-    <ValueLabel.Container>
-      <ValueLabel label="State">
-        <Switch checked={isOn} onChange={toggleState} />
-      </ValueLabel>
-      <ValueLabel label="Managed">
-        <Switch checked={isManaged} onChange={toggleManaged} />
-      </ValueLabel>
-    </ValueLabel.Container>
+    <Stack>
+      <ValueLabel.Container>
+        <ValueLabel label="State">
+          <Switch checked={isOn} onChange={toggleState} />
+        </ValueLabel>
+        <ValueLabel label="Managed">
+          <Switch checked={isManaged} onChange={toggleManaged} />
+        </ValueLabel>
+      </ValueLabel.Container>
+      <Table.ScrollContainer minWidth="100%">
+        <Table>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>Time</Table.Th>
+              <Table.Th>Sensor Level</Table.Th>
+              <Table.Th>Trigger</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {data?.waterPump.history.map((record, index) => (
+              <Table.Tr key={`history-${index}`}>
+                <Table.Td>
+                  {dayjs(record.time).format("YYYY-MM-DD HH:mm:ss")}
+                </Table.Td>
+                <Table.Td>{record.sensorValue}</Table.Td>
+                <Table.Td>
+                  {record.trigger ? (
+                    <Icon name="success" color="green" />
+                  ) : (
+                    <Icon name="failed" />
+                  )}
+                </Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
+      </Table.ScrollContainer>
+    </Stack>
   );
 }
 

@@ -18,6 +18,13 @@ export type GetEwelinkStatusResponse = {
 export type WaterPumpData = {
   isOn?: boolean;
   isManaged: boolean;
+  history: TriggerHistory[];
+};
+
+export type TriggerHistory = {
+  time: Date;
+  sensorValue?: number;
+  trigger: boolean;
 };
 
 export type EwelinkSwitchData = {

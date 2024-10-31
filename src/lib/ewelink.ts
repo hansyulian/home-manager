@@ -8,7 +8,7 @@ import { randomString } from "~/lib/utils/randomString";
 import { homeSensorService } from "~/lib/homeSensorService";
 import { BaseFileStore } from "~/lib/fileStore";
 import { EwelinkStore } from "~/types/stores";
-import { EwelinkSwitchData } from "~/types/responses";
+import { EwelinkSwitchData, TriggerHistory } from "~/types/responses";
 
 const ewelinkStore = new BaseFileStore<EwelinkStore>("ewelink.json");
 
@@ -24,6 +24,7 @@ export class Ewelink {
   public refreshToken: string = "";
   public accessToken: string = "";
   private triggerInterval = appConfig.waterTorrent.triggerInterval;
+  private _history: TriggerHistory[] = [];
 
   constructor() {}
 
@@ -102,6 +103,14 @@ export class Ewelink {
     return !!this.intervalInstance;
   }
 
+  get history() {
+    return this._history.slice(0, 20);
+  }
+
+  private addHistory(record: TriggerHistory) {
+    this._history.unshift(record);
+  }
+
   async stopWaterPumpManager() {
     await this.ensureClientReady();
     if (this.intervalInstance) {
@@ -115,22 +124,28 @@ export class Ewelink {
     await this.ensureClientReady();
     await this.stopWaterPumpManager();
     console.log("Starting water pump manager");
-    await this.handleWaterPump();
+    this.handleWaterPump();
     const self = this;
     this.intervalInstance = setInterval(async () => {
       try {
-        await self.handleWaterPump();
+        self.handleWaterPump();
       } catch (err) {
         console.error(err);
       }
     }, this.triggerInterval * 1000);
   }
   async handleWaterPump() {
-    console.log(`--------- ${dayjs().format("YYYY-MM-DD HH:mm:SS")} ---------`);
+    const now = dayjs();
+    console.log(`--------- ${now.format("YYYY-MM-DD HH:mm:SS")} ---------`);
     console.log("Checking water torent status");
     const waterTorrentData = await this.getWaterTorrentData();
     if (!waterTorrentData.detected) {
       console.log("Water torrent data not detected! Aborting...");
+      this.addHistory({
+        time: now.toDate(),
+        trigger: false,
+        sensorValue: undefined,
+      });
       return;
     }
     console.log("Water torrent distance", waterTorrentData.value);
@@ -139,6 +154,11 @@ export class Ewelink {
         "Pumping untriggered, trigger value: ",
         appConfig.waterTorrent.triggerValue
       );
+      this.addHistory({
+        time: now.toDate(),
+        trigger: false,
+        sensorValue: waterTorrentData.value,
+      });
       return;
     }
     if (!this.refreshToken) {
@@ -146,6 +166,11 @@ export class Ewelink {
       return;
     }
     await this.ensureClientReady();
+    this.addHistory({
+      time: now.toDate(),
+      trigger: true,
+      sensorValue: waterTorrentData.value,
+    });
     console.log("Turning water pump on");
     await this.setWaterPumpState(true);
     console.log(`Waiting ${appConfig.waterTorrent.triggerDuration} seconds`);

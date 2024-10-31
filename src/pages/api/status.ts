@@ -18,6 +18,7 @@ export default apiWrapper<GetEwelinkStatusResponse>(async function () {
     waterPump: {
       isOn: waterPumpData?.isOn,
       isManaged: isWaterPumpManaged,
+      history: defaultEwelinkInstance.history,
     },
   };
 });
