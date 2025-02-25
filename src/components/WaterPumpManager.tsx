@@ -29,7 +29,7 @@ export function WaterPumpManager() {
 
   return (
     <Stack>
-      <WaterTorrentSummary data={waterTorrent} />
+      {waterTorrent && <WaterTorrentSummary data={waterTorrent} />}
       <Title order={4}>Controls</Title>
       {isAuthenticated ? <AuthenticatedState /> : <UnauthenticatedState />}
     </Stack>
